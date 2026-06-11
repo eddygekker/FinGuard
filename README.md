@@ -2,7 +2,7 @@
 
 AI-powered churn analytics platform for identifying at-risk customers and recommending retention actions.
 
-**Stack:** SQL · Python · Flask · React · Tableau (coming) · Retention Copilot (coming)
+**Stack:** SQL · Python · scikit-learn · Flask · React · Tableau (coming) · Retention Copilot (coming)
 
 ## Project structure
 
@@ -27,7 +27,7 @@ pip install -r requirements.txt
 py scripts/init_db.py
 ```
 
-This creates `data/finguard.db` with 500 synthetic SaaS customers and computes rule-based churn risk scores.
+This creates `data/finguard.db` with 500 synthetic SaaS customers, trains a Logistic Regression churn model, and computes ML-powered risk scores.
 
 ### 2. Start backend
 
@@ -59,18 +59,17 @@ Dashboard runs at http://localhost:5173
 | `GET /api/customers/:id` | Customer 360 view |
 | `GET /api/customers/:id/risk` | Live risk breakdown + drivers |
 | `POST /api/risk/refresh` | Recompute all risk scores |
+| `GET /api/model/metrics` | ML model evaluation metrics |
 
-## How risk scoring works (Phase 2a)
+## How risk scoring works (Phase 2b — Logistic Regression)
 
-Each active customer gets a **risk score (0–100)** from behavioral signals:
+A **Logistic Regression** model predicts churn probability from behavioral features:
 
-| Signal | Weight |
-|--------|--------|
-| Usage drop (14d vs prior 14d) | 30% |
-| Days since last login | 20% |
-| Open support tickets | 15% |
-| Payment failures (30d) | 20% |
-| Low feature adoption | 15% |
+- Usage drop, days since login, open tickets, payment failures
+- Feature adoption, tenure, MRR, recent activity
+- Plan type (Basic / Pro / Enterprise)
+
+**Risk score** = churn probability × 100
 
 | Score | Tier |
 |-------|------|
@@ -78,7 +77,17 @@ Each active customer gets a **risk score (0–100)** from behavioral signals:
 | 35–64 | Medium |
 | 65–100 | High |
 
-**Next phases:** ML model, Tableau dashboard, Retention Copilot AI agent, live event simulator.
+Retrain manually:
+```bash
+cd backend
+.venv\Scripts\activate
+py scripts/train_model.py
+py -c "from app.services.risk_scorer import refresh_all_risk_scores; refresh_all_risk_scores()"
+```
+
+Falls back to rule-based scoring if the model file is missing.
+
+**Next phases:** Tableau dashboard, Retention Copilot AI agent, live event simulator.
 
 ## SQL queries
 

@@ -69,7 +69,7 @@ function App() {
         </div>
         <div className="header-meta">
           <span className={`status-dot ${error ? 'offline' : 'online'}`} />
-          {error ? 'API offline' : 'Live dashboard'}
+          {error ? 'API offline' : metrics?.scoring_method === 'logistic_regression' ? 'ML-powered dashboard' : 'Live dashboard'}
           {lastFetch && (
             <span className="muted">
               Updated {lastFetch.toLocaleTimeString()}
@@ -107,6 +107,12 @@ function App() {
                 <p>MRR at risk</p>
                 <h2>{formatMrr(metrics.mrr_at_risk)}</h2>
               </article>
+              {metrics.model_roc_auc != null && (
+                <article className="metric-card">
+                  <p>Model ROC-AUC</p>
+                  <h2>{metrics.model_roc_auc}</h2>
+                </article>
+              )}
             </>
           )
         )}

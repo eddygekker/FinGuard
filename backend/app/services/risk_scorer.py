@@ -1,6 +1,8 @@
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 
 from app.db import get_connection
+from app.services.churn_model import model_available, score_with_model
+from app.services.features import compute_features_at_date
 
 WEIGHTS = {
     "usage_drop": 0.30,
@@ -9,10 +11,6 @@ WEIGHTS = {
     "payment_failures": 0.20,
     "feature_adoption": 0.15,
 }
-
-
-def _clamp(value: float, low: float = 0.0, high: float = 100.0) -> float:
-    return max(low, min(high, value))
 
 
 def _tier(score: float) -> str:
@@ -65,9 +63,6 @@ def _feature_adoption_score(avg_features: float) -> float:
 
 def compute_customer_features(customer_id: int, today: date | None = None) -> dict | None:
     today = today or date.today()
-    recent_start = today - timedelta(days=14)
-    prior_start = today - timedelta(days=28)
-    billing_start = today - timedelta(days=30)
 
     with get_connection() as conn:
         customer = conn.execute(
@@ -77,88 +72,10 @@ def compute_customer_features(customer_id: int, today: date | None = None) -> di
         if not customer or customer["status"] != "active":
             return None
 
-        recent_usage = conn.execute(
-            """
-            SELECT COALESCE(SUM(logins), 0) AS logins, COALESCE(AVG(features_used), 0) AS features
-            FROM usage_events
-            WHERE customer_id = ? AND event_date > ? AND event_date <= ?
-            """,
-            (customer_id, recent_start.isoformat(), today.isoformat()),
-        ).fetchone()
-
-        prior_usage = conn.execute(
-            """
-            SELECT COALESCE(SUM(logins), 0) AS logins
-            FROM usage_events
-            WHERE customer_id = ? AND event_date > ? AND event_date <= ?
-            """,
-            (customer_id, prior_start.isoformat(), recent_start.isoformat()),
-        ).fetchone()
-
-        last_login = conn.execute(
-            """
-            SELECT MAX(event_date) AS last_date
-            FROM usage_events
-            WHERE customer_id = ? AND logins > 0
-            """,
-            (customer_id,),
-        ).fetchone()
-
-        recent_logins_7d = conn.execute(
-            """
-            SELECT COALESCE(SUM(logins), 0) AS logins
-            FROM usage_events
-            WHERE customer_id = ? AND event_date > ? AND event_date <= ?
-            """,
-            (customer_id, (today - timedelta(days=7)).isoformat(), today.isoformat()),
-        ).fetchone()
-
-        open_tickets = conn.execute(
-            """
-            SELECT COUNT(*) AS count
-            FROM support_tickets
-            WHERE customer_id = ? AND status = 'open'
-            """,
-            (customer_id,),
-        ).fetchone()
-
-        payment_failures = conn.execute(
-            """
-            SELECT COUNT(*) AS count
-            FROM billing_events
-            WHERE customer_id = ? AND event_type = 'payment_failed'
-              AND event_date >= ?
-            """,
-            (customer_id, billing_start.isoformat()),
-        ).fetchone()
-
-    recent_logins = recent_usage["logins"] or 0
-    prior_logins = prior_usage["logins"] or 0
-    if prior_logins > 0:
-        usage_drop_pct = _clamp(((prior_logins - recent_logins) / prior_logins) * 100)
-    elif recent_logins == 0:
-        usage_drop_pct = 100.0
-    else:
-        usage_drop_pct = 0.0
-
-    if last_login["last_date"]:
-        days_since_login = (today - date.fromisoformat(last_login["last_date"])).days
-    else:
-        days_since_login = 30
-
-    if (recent_logins_7d["logins"] or 0) == 0 and days_since_login > 3:
-        days_since_login = max(days_since_login, 10)
-
-    return {
-        "usage_drop_pct": round(usage_drop_pct, 1),
-        "days_since_login": days_since_login,
-        "open_tickets": open_tickets["count"],
-        "payment_failures": payment_failures["count"],
-        "feature_adoption": round(recent_usage["features"] or 0, 1),
-    }
+    return compute_features_at_date(customer_id, today)
 
 
-def score_features(features: dict) -> dict:
+def score_features_rules(features: dict) -> dict:
     component_scores = {
         "usage_drop": _usage_drop_score(features["usage_drop_pct"]),
         "days_since_login": _days_since_login_score(features["days_since_login"]),
@@ -177,6 +94,7 @@ def score_features(features: dict) -> dict:
             {
                 "signal": key.replace("_", " "),
                 "contribution": round(WEIGHTS[key] * component_scores[key], 1),
+                "direction": "increases risk",
             }
             for key in WEIGHTS
         ],
@@ -187,9 +105,18 @@ def score_features(features: dict) -> dict:
     return {
         "risk_score": risk_score,
         "risk_tier": _tier(risk_score),
+        "scoring_method": "rule_based",
         **features,
         "drivers": drivers[:3],
     }
+
+
+def score_features(features: dict) -> dict:
+    if model_available():
+        ml_score = score_with_model(features)
+        if ml_score:
+            return ml_score
+    return score_features_rules(features)
 
 
 def refresh_all_risk_scores() -> int:

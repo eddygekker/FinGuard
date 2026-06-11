@@ -1,0 +1,26 @@
+{
+  "model": "logistic_regression",
+  "trained_at": "2026-06-11T11:13:34.378662",
+  "train_size": 375,
+  "test_size": 125,
+  "churn_rate_train": 0.2533,
+  "accuracy": 0.904,
+  "precision": 0.7381,
+  "recall": 0.9688,
+  "f1": 0.8378,
+  "roc_auc": 0.9449,
+  "features": [
+    "usage_drop_pct",
+    "days_since_login",
+    "open_tickets",
+    "payment_failures",
+    "feature_adoption",
+    "tenure_days",
+    "mrr",
+    "recent_logins_14d",
+    "recent_active_minutes_14d",
+    "plan_basic",
+    "plan_pro",
+    "plan_enterprise"
+  ]
+}

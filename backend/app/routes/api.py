@@ -3,6 +3,7 @@ from datetime import datetime
 from flask import Blueprint, jsonify, request
 
 from app.db import fetch_all, fetch_one
+from app.services.churn_model import load_meta, model_available
 from app.services.risk_scorer import compute_customer_features, refresh_all_risk_scores, score_features
 
 api_bp = Blueprint("api", __name__)
@@ -37,6 +38,8 @@ def metrics():
         "SELECT MAX(computed_at) AS computed_at FROM customer_risk_scores"
     )
 
+    meta = load_meta() if model_available() else None
+
     return jsonify(
         {
             "active_customers": overview["active_customers"] or 0,
@@ -46,6 +49,8 @@ def metrics():
             "medium_risk_count": overview["medium_risk_count"] or 0,
             "mrr_at_risk": overview["mrr_at_risk"] or 0,
             "last_updated": last_computed["computed_at"] if last_computed else None,
+            "scoring_method": "logistic_regression" if meta else "rule_based",
+            "model_roc_auc": meta.get("roc_auc") if meta else None,
         }
     )
 
@@ -153,3 +158,10 @@ def customer_risk(customer_id: int):
 def refresh_risk():
     updated = refresh_all_risk_scores()
     return jsonify({"updated": updated, "status": "ok"})
+
+
+@api_bp.get("/model/metrics")
+def model_metrics():
+    if not model_available():
+        return jsonify({"error": "Model not trained. Run scripts/train_model.py"}), 404
+    return jsonify(load_meta())
