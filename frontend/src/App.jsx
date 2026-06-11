@@ -53,15 +53,82 @@ const RISK_FILTERS = [
 
 const CUSTOMER_LIMIT = 50
 
+const METRIC_TOOLTIPS = {
+  active: 'Customers with an active subscription — still paying and not marked as churned.',
+  highRisk: 'Accounts with a churn risk score of 65 or higher. These should be prioritized for retention outreach.',
+  churnRate: 'Share of all customers who have cancelled. Calculated as churned ÷ total customers.',
+  mrrAtRisk: 'Combined monthly subscription revenue from high-risk accounts only. This is the MRR you could lose if they churn.',
+  rocAuc: 'Model accuracy score (0–1). Measures how well the ML model separates customers who churn from those who stay. Above 0.9 is strong.',
+}
+
 const SORTABLE_COLUMNS = [
   { id: 'company_name', label: 'Company' },
-  { id: 'mrr', label: 'MRR' },
-  { id: 'risk_score', label: 'Risk' },
+  { id: 'mrr', label: 'MRR', tooltip: 'Monthly Recurring Revenue — how much this customer pays per month in subscription fees.' },
+  { id: 'risk_score', label: 'Risk', tooltip: 'Churn risk score (0–100) from the ML model. Higher score = more likely to cancel.' },
 ]
+
+const COLUMN_TOOLTIPS = {
+  plan: 'Subscription tier — Basic, Pro, or Enterprise. Higher tiers usually mean more revenue at stake.',
+  signals: 'Health warning signs: usage drop %, open support tickets, and failed payments. More signals = higher churn risk.',
+}
 
 function sortIndicator(sortBy, sortDir, columnId) {
   if (sortBy !== columnId) return null
   return sortDir === 'asc' ? ' ↑' : ' ↓'
+}
+
+function HeaderTooltip({ text }) {
+  return (
+    <span className="header-tooltip">
+      <button
+        type="button"
+        className="header-tooltip-trigger"
+        aria-label={`About: ${text}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        ?
+      </button>
+      <span className="header-tooltip-content header-tooltip-below" role="tooltip">
+        {text}
+      </span>
+    </span>
+  )
+}
+
+function MetricLabel({ label, tooltip }) {
+  return (
+    <p className="metric-label">
+      <span>{label}</span>
+      {tooltip && <HeaderTooltip text={tooltip} />}
+    </p>
+  )
+}
+
+function ColumnHeader({ label, tooltip, sortable, sortBy, sortDir, columnId, onSort }) {
+  return (
+    <div className="th-label">
+      {sortable ? (
+        <button
+          type="button"
+          className={`sort-header ${sortBy === columnId ? 'active' : ''}`}
+          onClick={() => onSort(columnId)}
+          aria-sort={
+            sortBy === columnId
+              ? sortDir === 'asc'
+                ? 'ascending'
+                : 'descending'
+              : 'none'
+          }
+        >
+          {label}
+          {sortIndicator(sortBy, sortDir, columnId)}
+        </button>
+      ) : (
+        <span className="col-label">{label}</span>
+      )}
+      {tooltip && <HeaderTooltip text={tooltip} />}
+    </div>
+  )
 }
 
 function SkeletonMetrics() {
@@ -124,10 +191,39 @@ function formatDriverLabel(signal) {
   return signal.charAt(0).toUpperCase() + signal.slice(1)
 }
 
-function formatContribution(value) {
-  if (value >= 1) return value.toFixed(1)
-  if (value >= 0.01) return value.toFixed(2)
-  return value.toFixed(3)
+function RiskDriversChart({ drivers, scoringMethod }) {
+  if (!drivers?.length) return null
+
+  const increasing = drivers.filter((d) => d.direction === 'increases risk')
+  const shown = (increasing.length >= 3 ? increasing : drivers).slice(0, 5)
+  const maxContribution = Math.max(...shown.map((d) => d.contribution), 0.001)
+
+  return (
+    <div className="drivers-block">
+      <div className="drivers-header">
+        <div>
+          <h4 className="block-title">Top risk drivers</h4>
+          <p className="drivers-hint">Longer bar = stronger impact on this customer&apos;s risk</p>
+        </div>
+        <span className="drivers-method">
+          {scoringMethod === 'logistic_regression' ? 'ML model' : 'Rule-based'}
+        </span>
+      </div>
+      <div className="drivers-chart">
+        {shown.map((driver) => (
+          <div key={driver.signal} className="driver-row">
+            <span className="driver-label">{formatDriverLabel(driver.signal)}</span>
+            <div className="driver-bar-track">
+              <div
+                className="driver-bar-fill"
+                style={{ width: `${(driver.contribution / maxContribution) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function buildActionPlanText(analysis, companyName) {
@@ -189,39 +285,6 @@ function RiskDistributionChart({ metrics }) {
         ))}
       </div>
     </section>
-  )
-}
-
-function RiskDriversChart({ drivers, scoringMethod }) {
-  if (!drivers?.length) return null
-
-  const increasing = drivers.filter((d) => d.direction === 'increases risk')
-  const shown = (increasing.length >= 3 ? increasing : drivers).slice(0, 5)
-  const maxContribution = Math.max(...shown.map((d) => d.contribution), 0.001)
-
-  return (
-    <div className="drivers-block">
-      <div className="drivers-header">
-        <h4 className="block-title">Top risk drivers</h4>
-        <span className="drivers-method">
-          {scoringMethod === 'logistic_regression' ? 'ML model' : 'Rule-based'}
-        </span>
-      </div>
-      <div className="drivers-chart">
-        {shown.map((driver) => (
-          <div key={driver.signal} className="driver-row">
-            <span className="driver-label">{formatDriverLabel(driver.signal)}</span>
-            <div className="driver-bar-track">
-              <div
-                className="driver-bar-fill"
-                style={{ width: `${(driver.contribution / maxContribution) * 100}%` }}
-              />
-            </div>
-            <span className="driver-value">{formatContribution(driver.contribution)}</span>
-          </div>
-        ))}
-      </div>
-    </div>
   )
 }
 
@@ -349,7 +412,7 @@ function App() {
       }
 
       const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Copilot request failed')
+      if (!res.ok) throw new Error(data.error || 'Agent request failed')
       setCopilot(data)
       setCopyFeedback(false)
     } catch (err) {
@@ -433,8 +496,8 @@ function App() {
       <header className="topbar">
         <div className="topbar-inner">
           <div className="brand">
-            <div className="brand-icon">
-              <ShieldIcon size={20} />
+            <div className="brand-icon brand-logo">
+              <img src="/logo.svg" alt="" width={40} height={40} />
             </div>
             <div>
               <p className="eyebrow">Retention Intelligence</p>
@@ -466,19 +529,10 @@ function App() {
 
       <div className="main">
         <section className="page-intro animate-in">
-          <div>
-            <h2 className="page-title">Churn command center</h2>
-            <p className="page-subtitle">
-              Monitor at-risk accounts, prioritize revenue impact, and get AI-powered retention playbooks.
-            </p>
-          </div>
-          {!loading && metrics && (
-            <div className="intro-stat">
-              <span className="intro-stat-label">Revenue at risk</span>
-              <strong className="intro-stat-value">{formatMrr(metrics.mrr_at_risk)}</strong>
-              <span className="intro-stat-meta">{metrics.high_risk_count} high-risk accounts</span>
-            </div>
-          )}
+          <h2 className="page-title">Churn command center</h2>
+          <p className="page-subtitle">
+            Monitor at-risk accounts, prioritize revenue impact, and get AI-powered retention playbooks.
+          </p>
         </section>
 
         {error && (
@@ -496,32 +550,32 @@ function App() {
               <>
                 <article className="metric-card metric-blue animate-in" style={{ animationDelay: '40ms' }}>
                   <div className="metric-icon"><UsersIcon /></div>
-                  <p className="metric-label">Active customers</p>
+                  <MetricLabel label="Active customers" tooltip={METRIC_TOOLTIPS.active} />
                   <h2 className="metric-value">{metrics.active_customers}</h2>
                   <p className="metric-hint">{metrics.churned_customers} churned total</p>
                 </article>
                 <article className="metric-card metric-red animate-in" style={{ animationDelay: '80ms' }}>
                   <div className="metric-icon"><AlertIcon /></div>
-                  <p className="metric-label">High risk</p>
+                  <MetricLabel label="High risk" tooltip={METRIC_TOOLTIPS.highRisk} />
                   <h2 className="metric-value">{metrics.high_risk_count}</h2>
                   <p className="metric-hint">{metrics.medium_risk_count} medium risk</p>
                 </article>
                 <article className="metric-card metric-amber animate-in" style={{ animationDelay: '120ms' }}>
                   <div className="metric-icon"><TrendIcon /></div>
-                  <p className="metric-label">Churn rate</p>
+                  <MetricLabel label="Churn rate" tooltip={METRIC_TOOLTIPS.churnRate} />
                   <h2 className="metric-value">{metrics.churn_rate_pct}%</h2>
                   <p className="metric-hint">Across all accounts</p>
                 </article>
                 <article className="metric-card accent animate-in" style={{ animationDelay: '160ms' }}>
                   <div className="metric-icon"><DollarIcon /></div>
-                  <p className="metric-label">MRR at risk</p>
+                  <MetricLabel label="MRR at risk" tooltip={METRIC_TOOLTIPS.mrrAtRisk} />
                   <h2 className="metric-value">{formatMrr(metrics.mrr_at_risk)}</h2>
                   <p className="metric-hint">High-tier accounts only</p>
                 </article>
                 {metrics.model_roc_auc != null && (
                   <article className="metric-card metric-emerald animate-in" style={{ animationDelay: '200ms' }}>
                     <div className="metric-icon"><BrainIcon /></div>
-                    <p className="metric-label">Model ROC-AUC</p>
+                    <MetricLabel label="Model ROC-AUC" tooltip={METRIC_TOOLTIPS.rocAuc} />
                     <h2 className="metric-value">{metrics.model_roc_auc}</h2>
                     <p className="metric-hint">Logistic regression</p>
                   </article>
@@ -590,25 +644,23 @@ function App() {
                   <tr>
                     {SORTABLE_COLUMNS.map((col) => (
                       <th key={col.id}>
-                        <button
-                          type="button"
-                          className={`sort-header ${sortBy === col.id ? 'active' : ''}`}
-                          onClick={() => handleSort(col.id)}
-                          aria-sort={
-                            sortBy === col.id
-                              ? sortDir === 'asc'
-                                ? 'ascending'
-                                : 'descending'
-                              : 'none'
-                          }
-                        >
-                          {col.label}
-                          {sortIndicator(sortBy, sortDir, col.id)}
-                        </button>
+                        <ColumnHeader
+                          label={col.label}
+                          tooltip={col.tooltip}
+                          sortable
+                          sortBy={sortBy}
+                          sortDir={sortDir}
+                          columnId={col.id}
+                          onSort={handleSort}
+                        />
                       </th>
                     ))}
-                    <th>Plan</th>
-                    <th>Signals</th>
+                    <th>
+                      <ColumnHeader label="Plan" tooltip={COLUMN_TOOLTIPS.plan} />
+                    </th>
+                    <th>
+                      <ColumnHeader label="Signals" tooltip={COLUMN_TOOLTIPS.signals} />
+                    </th>
                     <th aria-hidden="true" />
                   </tr>
                 </thead>
@@ -681,7 +733,7 @@ function App() {
               <div>
                 <h2>Customer 360</h2>
                 <p className="panel-desc">
-                  {selected ? 'Risk profile & retention copilot' : 'Select an account to inspect'}
+                  {selected ? 'Risk profile & retention agent' : 'Select an account to inspect'}
                 </p>
               </div>
             </div>
@@ -750,11 +802,11 @@ function App() {
                       <div className="copilot-title-row">
                         <span className="copilot-icon"><SparkIcon size={18} /></span>
                         <div>
-                          <p className="eyebrow">Retention Copilot</p>
+                          <p className="eyebrow">Retention Agent</p>
                           <p className="muted">
                             {copilot?.provider
                               ? `Powered by ${copilot.provider}`
-                              : 'AI churn expert · one-click analysis'}
+                              : 'AI retention expert · one-click analysis'}
                           </p>
                         </div>
                       </div>
@@ -765,7 +817,7 @@ function App() {
                         disabled={copilotLoading}
                       >
                         <SparkIcon size={14} />
-                        {copilotLoading ? 'Analyzing…' : 'Ask Copilot'}
+                        {copilotLoading ? 'Analyzing…' : 'Ask Agent'}
                       </button>
                     </div>
 
@@ -869,7 +921,7 @@ function App() {
                     <ShieldIcon size={32} />
                   </div>
                   <h3>Pick an account</h3>
-                  <p>Select a customer from the table to view their risk profile and run the Retention Copilot.</p>
+                  <p>Select a customer from the table to view their risk profile and run the Retention Agent.</p>
                 </div>
               )}
             </div>

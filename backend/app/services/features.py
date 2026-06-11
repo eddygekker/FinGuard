@@ -91,10 +91,10 @@ def compute_features_at_date(customer_id: int, as_of_date: date) -> dict | None:
             SELECT COUNT(*) AS count
             FROM support_tickets
             WHERE customer_id = ?
+              AND status = 'open'
               AND created_at <= ?
-              AND (resolved_at IS NULL OR resolved_at > ?)
             """,
-            (customer_id, as_of_date.isoformat(), as_of_date.isoformat()),
+            (customer_id, as_of_date.isoformat()),
         ).fetchone()
 
         payment_failures = conn.execute(

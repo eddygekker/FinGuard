@@ -1,26 +1,41 @@
-﻿# FinGuard
+﻿<p align="center">
+  <img src="frontend/public/logo.svg" alt="FinGuard" width="72" />
+</p>
 
-**Churn intelligence for SaaS teams** — spot at-risk accounts, understand why, and act before revenue walks out the door.
+<h1 align="center">FinGuard</h1>
 
-SQL · Python · scikit-learn · Flask · React · LLM Copilot · Tableau *(next)*
+<p align="center">
+  <strong>Churn intelligence for SaaS teams</strong><br/>
+  Spot at-risk accounts · Understand why · Act before revenue leaves
+</p>
+
+<p align="center">
+  SQL · Python · scikit-learn · Flask · React · LLM Agent
+</p>
+
+<p align="center">
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#features">Features</a> ·
+  <a href="#docs">Docs</a>
+</p>
 
 ---
 
-## What it does
+## Features
 
-FinGuard turns customer signals into a live retention command center:
-
-- **Risk scoring** — Logistic Regression model (ROC-AUC ~0.94) ranks active customers by churn probability
-- **Command center** — KPIs, risk distribution, searchable customer table, Customer 360 view
-- **Explainability** — top risk drivers per account (usage drop, tickets, payments, and more)
-- **Retention Copilot** — AI playbook with urgency, action steps, talking points, and one-click copy
-- **Dark mode** — toggle in the header, preference saved locally
+| | |
+|---|---|
+| **Risk scoring** | Logistic Regression · ROC-AUC ~0.94 |
+| **Command center** | KPIs, risk distribution, searchable table |
+| **Customer 360** | Open tickets, top risk drivers, live stats |
+| **Retention Agent** | AI playbook — actions, steps & talking points |
+| **Polish** | Dark mode · tooltips · copy action plan |
 
 ---
 
 ## Quick start
 
-### 1 · Data & model
+**1. Setup data & model**
 
 ```powershell
 cd backend
@@ -30,101 +45,70 @@ pip install -r requirements.txt
 py scripts/init_db.py
 ```
 
-Creates `data/finguard.db` with 500 synthetic customers, trains the churn model, and computes risk scores.
-
-### 2 · Copilot *(optional)*
+**2. Run**
 
 ```powershell
-copy .env.example .env
+# Terminal 1 — API  →  localhost:5000
+cd backend && .venv\Scripts\activate && py run.py
+
+# Terminal 2 — UI   →  localhost:5173
+cd frontend && npm install && npm run dev
 ```
 
-Set `LLM_PROVIDER` in `backend/.env`:
+**3. Retention Agent** *(optional)*
 
-| Provider | Key variable | Notes |
-|----------|--------------|-------|
-| `local` | — | Rule-based fallback, no API key |
-| `groq` | `GROQ_API_KEY` | Free tier at [console.groq.com](https://console.groq.com) |
-| `gemini` | `GEMINI_API_KEY` | Key must start with `AIza` |
-| `openai` | `OPENAI_API_KEY` | Optional |
-
-### 3 · Run
-
-**Backend** — http://localhost:5000
-
-```powershell
-cd backend
-.venv\Scripts\activate
-py run.py
-```
-
-**Frontend** — http://localhost:5173
-
-```powershell
-cd frontend
-npm install
-npm run dev
-```
+Copy `backend/.env.example` → `.env` and set `LLM_PROVIDER` (`local` · `groq` · `gemini`).
 
 ---
 
-## Project layout
+## How it works
+
+```
+Synthetic data (SQLite)
+        ↓
+Feature engineering → Logistic Regression
+        ↓
+Risk scores (0–100) → Flask API → React dashboard
+        ↓
+Retention Agent (LLM) → save plan per customer
+```
+
+**Churn rate** = churned customers ÷ total customers  
+**Risk tiers** — Low 0–34 · Medium 35–64 · High 65–100
+
+Data lives in `data/finguard.db` (generated locally, not in Git).
+
+---
+
+## Project structure
 
 ```
 FinGuard/
-├── data/              SQLite DB + seed script
-├── sql/               Schema & analytics queries
-├── backend/           Flask API · ML · Copilot
-└── frontend/          React dashboard (Vite)
+├── data/       Seed script + SQLite DB
+├── sql/        Schema & analytics queries
+├── backend/    API · ML model · Retention Agent
+├── frontend/   React dashboard
+└── docs/       Hebrew PDF guide
 ```
 
 ---
 
-## API
+## Docs
 
-| Endpoint | Description |
-|----------|-------------|
-| `GET /api/metrics` | KPIs, risk counts, MRR at risk |
-| `GET /api/customers` | Customer list (`?risk=high`, `?limit=50`) |
-| `GET /api/customers/:id` | Customer 360 + open tickets + drivers |
-| `GET /api/customers/:id/risk` | Live risk breakdown |
-| `POST /api/copilot/analyze` | Retention Copilot analysis |
-| `POST /api/risk/refresh` | Recompute all scores |
-| `GET /api/model/metrics` | Model evaluation metrics |
+Hebrew project guide (PDF): [`docs/FinGuard-Hebrew-Guide.pdf`](docs/FinGuard-Hebrew-Guide.pdf)
 
----
-
-## Risk scoring
-
-**Features:** usage drop, days since login, open tickets, payment failures, feature adoption, tenure, MRR, recent activity, plan type.
-
-**Score** = churn probability × 100
-
-| Score | Tier |
-|-------|------|
-| 0–34 | Low |
-| 35–64 | Medium |
-| 65–100 | High |
-
-Retrain:
-
-```powershell
-cd backend
-py scripts/train_model.py
-py -c "from app.services.risk_scorer import refresh_all_risk_scores; refresh_all_risk_scores()"
-```
-
-Falls back to rule-based scoring if the model file is missing.
+Regenerate: `py docs/generate_hebrew_pdf.py`
 
 ---
 
 ## Roadmap
 
-- [ ] Tableau dashboard (connect to SQLite)
+- [ ] Tableau dashboard
 - [ ] Live event simulator
-- [ ] Usage trend sparklines
+- [ ] Usage sparklines
 
 ---
 
-## License
-
-Portfolio / educational project.
+<p align="center">
+  Portfolio project · Built for learning & interviews
+</p>

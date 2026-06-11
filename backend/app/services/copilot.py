@@ -115,7 +115,7 @@ def build_copilot_context(customer_id: int) -> dict:
         raise ValueError("Customer not found")
 
     if customer["status"] != "active":
-        raise ValueError("Copilot only analyzes active customers")
+        raise ValueError("Retention Agent only analyzes active customers")
 
     features = compute_customer_features(customer_id)
     risk = score_features(features) if features else None

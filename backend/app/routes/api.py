@@ -138,6 +138,7 @@ def customer_detail(customer_id: int):
 
     payload = dict(customer)
     payload["open_support_tickets"] = [dict(ticket) for ticket in tickets]
+    payload["open_tickets"] = len(payload["open_support_tickets"])
 
     features = compute_customer_features(customer_id)
     if features:
@@ -193,4 +194,4 @@ def copilot_analyze():
     except RuntimeError as exc:
         return jsonify({"error": str(exc)}), 503
     except Exception as exc:
-        return jsonify({"error": f"Copilot failed: {exc}"}), 500
+        return jsonify({"error": f"Retention Agent failed: {exc}"}), 500
