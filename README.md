@@ -24,7 +24,7 @@ FinGuard is a **customer retention analytics platform** built for subscription b
 2. **Why are they at risk?** — Usage drops, open support tickets, failed payments, and plan signals are surfaced in a Customer 360 view.
 3. **What should we do next?** — The Retention Agent turns risk context into a concrete playbook: outreach steps, talking points, and save actions.
 
-The project simulates a realistic SaaS dataset (~500 companies with usage, billing, and support history), runs a **Logistic Regression** churn model, and presents everything in an interactive **React dashboard** backed by a **Flask API**.
+The project simulates a realistic SaaS dataset (~500 companies with usage, billing, and support history), runs a **Logistic Regression** churn model, and presents everything in an interactive **React dashboard**.
 
 Built as a portfolio project to demonstrate the full data-to-product loop: **SQL → Python/ML → API → UI → LLM agent**.
 
