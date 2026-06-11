@@ -5,18 +5,31 @@
 <h1 align="center">FinGuard</h1>
 
 <p align="center">
-  <strong>Churn intelligence for SaaS teams</strong><br/>
-  Spot at-risk accounts · Understand why · Act before revenue leaves
+  <strong>Churn intelligence for B2B SaaS teams</strong>
 </p>
+
+<p align="center">
+  <a href="#what-is-finguard">About</a> ·
+  <a href="#quick-start">Quick start</a> ·
+  <a href="#features">Features</a>
+</p>
+
+---
+
+## What is FinGuard?
+
+FinGuard is a **customer retention analytics platform** built for subscription businesses. It helps teams answer three questions before revenue walks out the door:
+
+1. **Which accounts are at risk?** — ML scores every active customer from 0–100 and ranks them by churn probability.
+2. **Why are they at risk?** — Usage drops, open support tickets, failed payments, and plan signals are surfaced in a Customer 360 view.
+3. **What should we do next?** — The Retention Agent turns risk context into a concrete playbook: outreach steps, talking points, and save actions.
+
+The project simulates a realistic SaaS dataset (~500 companies with usage, billing, and support history), runs a **Logistic Regression** churn model, and presents everything in an interactive **React dashboard** backed by a **Flask API**.
+
+Built as a portfolio project to demonstrate the full data-to-product loop: **SQL → Python/ML → API → UI → LLM agent**.
 
 <p align="center">
   SQL · Python · scikit-learn · Flask · React · LLM Agent
-</p>
-
-<p align="center">
-  <a href="#quick-start">Quick start</a> ·
-  <a href="#features">Features</a> ·
-  <a href="#docs">Docs</a>
 </p>
 
 ---
@@ -87,17 +100,8 @@ FinGuard/
 ├── data/       Seed script + SQLite DB
 ├── sql/        Schema & analytics queries
 ├── backend/    API · ML model · Retention Agent
-├── frontend/   React dashboard
-└── docs/       Hebrew PDF guide
+└── frontend/   React dashboard
 ```
-
----
-
-## Docs
-
-Hebrew project guide (PDF): [`docs/FinGuard-Hebrew-Guide.pdf`](docs/FinGuard-Hebrew-Guide.pdf)
-
-Regenerate: `py docs/generate_hebrew_pdf.py`
 
 ---
 
