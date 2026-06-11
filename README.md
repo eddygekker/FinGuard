@@ -1,25 +1,28 @@
 ﻿# FinGuard
 
-AI-powered churn analytics platform for identifying at-risk customers and recommending retention actions.
+**Churn intelligence for SaaS teams** — spot at-risk accounts, understand why, and act before revenue walks out the door.
 
-**Stack:** SQL · Python · scikit-learn · Flask · React · Tableau (coming) · Retention Copilot (coming)
+SQL · Python · scikit-learn · Flask · React · LLM Copilot · Tableau *(next)*
 
-## Project structure
+---
 
-```
-FinGuard/
-├── data/           # SQLite DB + seed script
-├── sql/            # Schema and analytics queries
-├── backend/        # Flask API + risk scoring
-├── frontend/       # React dashboard
-└── notebooks/      # ML analysis (coming)
-```
+## What it does
+
+FinGuard turns customer signals into a live retention command center:
+
+- **Risk scoring** — Logistic Regression model (ROC-AUC ~0.94) ranks active customers by churn probability
+- **Command center** — KPIs, risk distribution, searchable customer table, Customer 360 view
+- **Explainability** — top risk drivers per account (usage drop, tickets, payments, and more)
+- **Retention Copilot** — AI playbook with urgency, action steps, talking points, and one-click copy
+- **Dark mode** — toggle in the header, preference saved locally
+
+---
 
 ## Quick start
 
-### 1. Initialize data
+### 1 · Data & model
 
-```bash
+```powershell
 cd backend
 py -m venv .venv
 .venv\Scripts\activate
@@ -27,49 +30,74 @@ pip install -r requirements.txt
 py scripts/init_db.py
 ```
 
-This creates `data/finguard.db` with 500 synthetic SaaS customers, trains a Logistic Regression churn model, and computes ML-powered risk scores.
+Creates `data/finguard.db` with 500 synthetic customers, trains the churn model, and computes risk scores.
 
-### 2. Start backend
+### 2 · Copilot *(optional)*
 
-```bash
+```powershell
+copy .env.example .env
+```
+
+Set `LLM_PROVIDER` in `backend/.env`:
+
+| Provider | Key variable | Notes |
+|----------|--------------|-------|
+| `local` | — | Rule-based fallback, no API key |
+| `groq` | `GROQ_API_KEY` | Free tier at [console.groq.com](https://console.groq.com) |
+| `gemini` | `GEMINI_API_KEY` | Key must start with `AIza` |
+| `openai` | `OPENAI_API_KEY` | Optional |
+
+### 3 · Run
+
+**Backend** — http://localhost:5000
+
+```powershell
 cd backend
 .venv\Scripts\activate
 py run.py
 ```
 
-API runs at http://localhost:5000
+**Frontend** — http://localhost:5173
 
-### 3. Start frontend
-
-```bash
+```powershell
 cd frontend
 npm install
 npm run dev
 ```
 
-Dashboard runs at http://localhost:5173
+---
 
-## API endpoints
+## Project layout
+
+```
+FinGuard/
+├── data/              SQLite DB + seed script
+├── sql/               Schema & analytics queries
+├── backend/           Flask API · ML · Copilot
+└── frontend/          React dashboard (Vite)
+```
+
+---
+
+## API
 
 | Endpoint | Description |
 |----------|-------------|
-| `GET /api/health` | Service health check |
-| `GET /api/metrics` | Churn KPIs and MRR at risk |
-| `GET /api/customers?risk=high` | Filter customers by risk tier |
-| `GET /api/customers/:id` | Customer 360 view |
-| `GET /api/customers/:id/risk` | Live risk breakdown + drivers |
-| `POST /api/risk/refresh` | Recompute all risk scores |
-| `GET /api/model/metrics` | ML model evaluation metrics |
+| `GET /api/metrics` | KPIs, risk counts, MRR at risk |
+| `GET /api/customers` | Customer list (`?risk=high`, `?limit=50`) |
+| `GET /api/customers/:id` | Customer 360 + open tickets + drivers |
+| `GET /api/customers/:id/risk` | Live risk breakdown |
+| `POST /api/copilot/analyze` | Retention Copilot analysis |
+| `POST /api/risk/refresh` | Recompute all scores |
+| `GET /api/model/metrics` | Model evaluation metrics |
 
-## How risk scoring works (Phase 2b — Logistic Regression)
+---
 
-A **Logistic Regression** model predicts churn probability from behavioral features:
+## Risk scoring
 
-- Usage drop, days since login, open tickets, payment failures
-- Feature adoption, tenure, MRR, recent activity
-- Plan type (Basic / Pro / Enterprise)
+**Features:** usage drop, days since login, open tickets, payment failures, feature adoption, tenure, MRR, recent activity, plan type.
 
-**Risk score** = churn probability × 100
+**Score** = churn probability × 100
 
 | Score | Tier |
 |-------|------|
@@ -77,18 +105,26 @@ A **Logistic Regression** model predicts churn probability from behavioral featu
 | 35–64 | Medium |
 | 65–100 | High |
 
-Retrain manually:
-```bash
+Retrain:
+
+```powershell
 cd backend
-.venv\Scripts\activate
 py scripts/train_model.py
 py -c "from app.services.risk_scorer import refresh_all_risk_scores; refresh_all_risk_scores()"
 ```
 
 Falls back to rule-based scoring if the model file is missing.
 
-**Next phases:** Tableau dashboard, Retention Copilot AI agent, live event simulator.
+---
 
-## SQL queries
+## Roadmap
 
-See `sql/02_analytics_queries.sql` for churn rate, cohort retention, and driver analysis queries (Tableau-ready).
+- [ ] Tableau dashboard (connect to SQLite)
+- [ ] Live event simulator
+- [ ] Usage trend sparklines
+
+---
+
+## License
+
+Portfolio / educational project.

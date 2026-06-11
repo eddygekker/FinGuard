@@ -73,7 +73,7 @@ def _driver_contributions(pipeline, features: dict) -> list[dict]:
         )
 
     contributions.sort(key=lambda item: item["contribution"], reverse=True)
-    return contributions[:3]
+    return contributions[:5]
 
 
 def score_with_model(features: dict) -> dict | None:

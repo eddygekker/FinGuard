@@ -1,6 +1,6 @@
 {
   "model": "logistic_regression",
-  "trained_at": "2026-06-11T11:13:34.378662",
+  "trained_at": "2026-06-11T11:16:09.966550+00:00",
   "train_size": 375,
   "test_size": 125,
   "churn_rate_train": 0.2533,

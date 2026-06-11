@@ -8,7 +8,7 @@ DEFAULT_DB_PATH = os.path.join(PROJECT_ROOT, "data", "finguard.db")
 
 
 def get_db_path() -> str:
-    return os.getenv("DATABASE_PATH", DEFAULT_DB_PATH)
+    return os.getenv("DATABASE_PATH") or DEFAULT_DB_PATH
 
 
 @contextmanager

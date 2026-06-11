@@ -107,7 +107,7 @@ def score_features_rules(features: dict) -> dict:
         "risk_tier": _tier(risk_score),
         "scoring_method": "rule_based",
         **features,
-        "drivers": drivers[:3],
+        "drivers": drivers[:5],
     }
 
 
